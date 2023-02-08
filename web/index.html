@@ -1,0 +1,22 @@
+<link rel="icon" href="favicon.ico">
+<script src="/dolphine.js"></script>
+<title>Dolphine Hello World!</title>
+<h3>Put in two numbers and press the button</h3>
+<input id="1" type="text"><input id="2" type="text">
+<br>
+<button id="button">"Press to add!"</button>
+
+<span id="reply"></span>
+
+<script>    
+      const button = document.getElementById("button");
+      button.onclick = async () => {
+            let input1 = document.getElementById("1").value;
+            let input2 = document.getElementById("2").value;
+            input1 = parseInt(input1);
+            input2 = parseInt(input2);
+            let answer = await dolphine.add(input1, input2);
+            let reply = document.getElementById("reply");
+            reply.innerHTML = answer;
+      }
+</script>
