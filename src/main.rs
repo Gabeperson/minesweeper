@@ -8,6 +8,7 @@ use dolphine;
 use dolphine::Dolphine;
 use rand::thread_rng;
 use rand::seq::SliceRandom;
+use std::io;
 
 static FILES: Dir = dolphine::include_dir!("web");
 
@@ -56,7 +57,7 @@ impl MineSweeper {
         }
         MineSweeper {
             numbers_board,
-            revealed_board: vec![vec![false; x as usize]; y as usize]
+            revealed_board: vec![vec![false; x as usize]; y as usize],
         }
 
 
@@ -64,17 +65,74 @@ impl MineSweeper {
     }
     fn debugprint(&self) {
         for y in self.numbers_board.iter() {
-            let mut s = String::new();
+            let mut s = String::from("[");
             for x in y.iter() {
-                s.push_str(&(x.to_string() + ","));
+                s.push_str(&(x.to_string() + ", "));
             }
+            s.push_str("]");
             println!("{}", s);
+        }
+        println!("--------------");
+        for y in self.revealed_board.iter() {
+            let mut s = String::from("[");
+            for x in y.iter() {
+                if *x {
+                    s.push_str(&(1.to_string() + ", "));
+                    continue
+                }
+                s.push_str(&(0.to_string() + ", "));
+                
+            }
+            s.push_str("]");
+            println!("{}", s);
+        }
+    }
+
+
+    fn reveal(&mut self, cell: (usize, usize)) {
+        if self.revealed_board[cell.0][cell.1] == true {
+            return
+        }
+        self.revealed_board[cell.0][cell.1] = true;
+        let (xmin, xmax, ymin, ymax) = (0, self.numbers_board[0].len(), 0, self.numbers_board.len());
+        if self.numbers_board[cell.0][cell.1] != 0 {
+            return;
+        }
+        // the square is a zero
+        for y in -1..=1 {
+            for x in -1..=1 {
+                //println!("y: {}, x: {}", y+y_cell, x+x_cell);
+                if y+cell.0 >= ymax as isize || y+cell.0 < ymin || x + cell.1 >= xmax as isize || x+cell.1 < xmin {
+                    continue;
+                }
+                if y == 0 && x == 0 {
+                    continue;
+                }
+                //println!("got hereee");
+                self.reveal(((y+y_cell) as usize, (x+x_cell) as usize));
+            }
         }
     }
 
 }
 
 fn main() {
-    let m = MineSweeper::new(20, 20, 50);
-    m.debugprint()
+    let mut m = MineSweeper::new(100, 100, 2);
+    m.debugprint();
+    let mut buf = String::new();
+    let mut buf2 = String::new();
+    println!("Y value");
+    io::stdin()
+        .read_line(&mut buf)
+        .unwrap();
+    println!("X value");
+    io::stdin()
+        .read_line(&mut buf2)
+        .unwrap();
+
+    buf = buf.trim().to_string();
+    buf2 = buf2.trim().to_string();
+    println!("{}, {}", &buf, &buf2);
+    m.reveal((buf.parse().unwrap(), buf2.parse().unwrap()));
+    m.debugprint();
 }
