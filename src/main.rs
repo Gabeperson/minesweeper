@@ -9,6 +9,7 @@ use dolphine::Dolphine;
 use rand::thread_rng;
 use rand::seq::SliceRandom;
 use std::io;
+use std::iter::zip;
 use std::time::Instant;
 
 static FILES: Dir = dolphine::include_dir!("web");
@@ -32,7 +33,8 @@ enum TileMarking {
 struct MineSweeper {
     numbers_board: Vec<Vec<u8>>,
     revealed_board: Vec<Vec<bool>>,
-    flagged_board: Vec<Vec<TileMarking>>
+    flagged_board: Vec<Vec<TileMarking>>,
+    started: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -62,7 +64,7 @@ impl MineSweeper {
                 if board[y_value as usize][x_value as usize] == Tile::None {
                     continue;
                 }
-                numbers_board[y_value as usize][x_value as usize] = 100;
+                numbers_board[y_value as usize][x_value as usize] += 100;
                 for y1 in -1..=1 {
                     for x1 in -1..=1 {
                         if y_value+y1 >= y || y_value+y1 < 0 || x_value + x1 >= x || x_value+x1 < 0 {
@@ -73,10 +75,12 @@ impl MineSweeper {
                 }
             }
         }
+        
         MineSweeper {
             numbers_board,
             revealed_board: vec![vec![false; x as usize]; y as usize],
-            flagged_board: vec![vec![TileMarking::None; x as usize]; y as usize]
+            flagged_board: vec![vec![TileMarking::None; x as usize]; y as usize],
+            started: false,
         }
 
 
@@ -107,22 +111,32 @@ impl MineSweeper {
         }
     }
 
-    fn reveal(&mut self, y: usize, x: usize) {
+    fn reveal(&mut self, y: usize, x: usize) -> Vec<(u16, u16, u8)> {
+        let original_revealed_board = self.revealed_board.clone();
         let mut stack = Vec::new();
         if self.numbers_board[y][x] > 0 {
             self.revealed_board[y][x] = true;
-            return;
+            return vec![]; // todo
         }
         if self.revealed_board[y][x] {
-            return;
+            return vec![];
         }
         stack.push((y as i16, x as i16, 0));
-        // REMOVE C
         self.reveal_impl(&mut stack, (self.numbers_board.len() as i16, self.numbers_board[0].len() as i16));
-        // REMOVE
+
+        let mut ret_vec = Vec::new();
+        for y in 0..original_revealed_board.len() {
+            for x in 0..original_revealed_board[0].len() {
+                if original_revealed_board[y][x] == self.revealed_board[y][x] {
+                    continue;
+                }
+                ret_vec.push((y as u16, x as u16, self.numbers_board[y][x]))
+            }
+        }
+        return ret_vec
     }
     
-    fn reveal_impl(&mut self, stack: &mut Vec<(i16, i16, u8)>, sizes: (i16, i16)) {
+    fn reveal_impl(&mut self, stack: &mut Vec<(i16, i16, u8)>, sizes: (i16, i16)) { // very bad code involved. Too lazy to refactor ok bye :D
         const CELL_8_ARRAY: &'static [(i16, i16); 9] = &[
             (-1, -1),
             (0, -1),
@@ -212,16 +226,49 @@ impl MineSweeper {
     
     fn first_click(&mut self, y: usize, x: usize) {
         if self.numbers_board[y][x] >= 100 {
-            for y in 0..self.numbers_board.len() {
-                for x in 0..self.numbers_board[0].len() {
-                    
+            'blck: {
+                for y1 in 0..self.numbers_board.len() {
+                    for x1 in 0..self.numbers_board[0].len() {
+                        if self.numbers_board[y1][x1] < 90 {
+                            for y_o in -1..=1 {
+                                for x_o in -1..=1 {
+                                    if y1 as i16 + y_o >= self.numbers_board.len() as i16 || y1 as i16 + y_o < 0 || x1 as i16 + x_o >= self.numbers_board[0].len() as i16 || x1 as i16 + x_o < 0  {
+                                        continue;
+                                    }
+                                    self.numbers_board[(y1 as i16+y_o) as usize][(x1 as i16+x_o) as usize] += 1;
+                                }
+                            }
+                            break 'blck
+                        }
+                    }
+                }
+            }
+            for y_o in -1..=1 {
+                for x_o in -1..=1 {
+                    if y as i16 + y_o >= self.numbers_board.len() as i16 || y as i16 + y_o < 0 || x as i16 + x_o >= self.numbers_board[0].len() as i16 || x as i16 + x_o < 0  {
+                        continue;
+                    }
+                    self.numbers_board[(y as i16 + y_o) as usize][(x as i16 + x_o) as usize] -= 1;
+                    if y_o == 0 && x_o == 0 {
+                        self.numbers_board[(y as i16 + y_o) as usize][(x as i16 + x_o) as usize] -= 100;
+                    }
                 }
             }
         }
+        self.reveal(y, x);
     }
 
 
-    fn handle_click(&mut self, y: usize, x: usize, clicktype: u8) { // 0 is primary, 2 is rclick
+    fn handle_click(&mut self, y: usize, x: usize, clicktype: u8) -> u8 {
+        /*
+        return values
+        0 if ongoing
+        1 if won
+        2 if lost
+        
+        
+        */
+        // clicktype: 0 is primary, 2 is rclick
         /*
         add enum for win or lose etc
         if rclick then run questions and bomb marks function. 
@@ -236,6 +283,7 @@ impl MineSweeper {
             ignore it(?)
         more(?)
         */
+        todo!();
     }
 
 }
