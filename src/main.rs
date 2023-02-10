@@ -32,7 +32,14 @@ enum TileMarking {
 struct MineSweeper {
     numbers_board: Vec<Vec<u8>>,
     revealed_board: Vec<Vec<bool>>,
+    flagged_board: Vec<Vec<TileMarking>>
+}
 
+#[derive(Clone, Debug)]
+enum GameResult {
+    Continuing,
+    Won,
+    Lost,
 }
 
 
@@ -69,6 +76,7 @@ impl MineSweeper {
         MineSweeper {
             numbers_board,
             revealed_board: vec![vec![false; x as usize]; y as usize],
+            flagged_board: vec![vec![TileMarking::None; x as usize]; y as usize]
         }
 
 
@@ -159,8 +167,36 @@ impl MineSweeper {
 
     }
 
-    fn chord(&mut self) {
-
+    fn chord(&mut self, y: i16, x: i16) {
+        let mut c = 0;
+        let n = self.numbers_board[y as usize][x as usize];
+        for y_offset in -1..=1 {
+            for x_offset in -1..=1 {
+                if y_offset == 0 && x_offset == 0 {
+                    continue;
+                }
+                if y + y_offset >= self.numbers_board.len() as i16 || y + y_offset < 0 || x + x_offset >= self.numbers_board[0].len() as i16 || x + x_offset < 0  {
+                    continue;
+                }
+                if self.flagged_board[(y+y_offset) as usize][(x+x_offset) as usize] == TileMarking::Mine {
+                    c += 1;
+                }
+            }
+        }
+        if c == n {
+            for y_offset in -1..=1 {
+                for x_offset in -1..=1 {
+                    if y_offset == 0 && x_offset == 0 {
+                        continue;
+                    }
+                    if y + y_offset >= self.numbers_board.len() as i16 || y + y_offset < 0 || x + x_offset >= self.numbers_board[0].len() as i16 || x + x_offset < 0  {
+                        continue;
+                    }
+                    // call open function here(?)
+                }
+            }
+        }
+        
     }
 
 
@@ -174,8 +210,14 @@ impl MineSweeper {
     }
 
     
-    fn first_click(&mut self) {
-
+    fn first_click(&mut self, y: usize, x: usize) {
+        if self.numbers_board[y][x] >= 100 {
+            for y in 0..self.numbers_board.len() {
+                for x in 0..self.numbers_board[0].len() {
+                    
+                }
+            }
+        }
     }
 
 
@@ -199,14 +241,14 @@ impl MineSweeper {
 }
 
 fn main() {
-    let n = 100;
+    let n = 10;
     let minecount = ((n*n) as f64 *0.2 ) as usize;
     let now = Instant::now();
     let mut m = MineSweeper::new(n, n, minecount);
-    let num1 = 50;
-    let num2 = 50;
+    let num1 = 5;
+    let num2 = 5;
     m.reveal(num1, num2);
-    //m.debugprint();
+    m.debugprint();
     println!("{}", now.elapsed().as_millis());
      
 }
