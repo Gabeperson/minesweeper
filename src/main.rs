@@ -9,8 +9,10 @@ use dolphine::Dolphine;
 use rand::thread_rng;
 use rand::seq::SliceRandom;
 use std::io;
+use std::time::Instant;
 
 static FILES: Dir = dolphine::include_dir!("web");
+// todo bitwise shift for indications???
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -19,11 +21,20 @@ enum Tile {
     None,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum TileMarking {
+    Mine,
+    Question,
+    None,
+}
+
 #[derive(Clone, Debug)]
 struct MineSweeper {
     numbers_board: Vec<Vec<u8>>,
     revealed_board: Vec<Vec<bool>>,
+
 }
+
 
 impl MineSweeper {
     fn new(x: isize, y: isize, mines: usize) -> MineSweeper {
@@ -88,51 +99,114 @@ impl MineSweeper {
         }
     }
 
-
-    fn reveal(&mut self, cell: (usize, usize)) {
-        if self.revealed_board[cell.0][cell.1] == true {
-            return
-        }
-        self.revealed_board[cell.0][cell.1] = true;
-        let (xmin, xmax, ymin, ymax) = (0, self.numbers_board[0].len(), 0, self.numbers_board.len());
-        if self.numbers_board[cell.0][cell.1] != 0 {
+    fn reveal(&mut self, y: usize, x: usize) {
+        let mut stack = Vec::new();
+        if self.numbers_board[y][x] > 0 {
+            self.revealed_board[y][x] = true;
             return;
         }
-        // the square is a zero
-        for y in -1..=1 {
-            for x in -1..=1 {
-                //println!("y: {}, x: {}", y+y_cell, x+x_cell);
-                if y+cell.0 >= ymax as isize || y+cell.0 < ymin || x + cell.1 >= xmax as isize || x+cell.1 < xmin {
-                    continue;
-                }
-                if y == 0 && x == 0 {
-                    continue;
-                }
-                //println!("got hereee");
-                self.reveal(((y+y_cell) as usize, (x+x_cell) as usize));
-            }
+        if self.revealed_board[y][x] {
+            return;
         }
+        stack.push((y as i16, x as i16, 0));
+        // REMOVE C
+        self.reveal_impl(&mut stack, (self.numbers_board.len() as i16, self.numbers_board[0].len() as i16));
+        // REMOVE
+    }
+    
+    fn reveal_impl(&mut self, stack: &mut Vec<(i16, i16, u8)>, sizes: (i16, i16)) {
+        const CELL_8_ARRAY: &'static [(i16, i16); 9] = &[
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+            (-1, 0),
+            (0, 0),
+            (1, 0),
+            (-1, 1),
+            (0, 1),
+            (1, 1),
+        ];
+        while let Some((y_coord, x_coord, arr_index)) = stack.pop() {
+            // check to see if we're at end. If so, remove from stack
+            if arr_index == 9 {
+                continue;
+            }
+            // run check for bug in debug mode
+            #[cfg(debug_assertions)]
+            if arr_index > 9 {
+                panic!("Higher than 9?? WHAT???");
+            }
+            
+            let (y_offset, x_offset) = CELL_8_ARRAY[arr_index as usize];
+            if y_coord + y_offset >= sizes.0 || y_coord + y_offset < 0 || x_coord + x_offset >= sizes.0 || x_coord + x_offset < 0 {
+                stack.push((y_coord, x_coord, arr_index+1));
+                continue;
+            }
+            if self.revealed_board[(y_coord + y_offset) as usize][(x_coord+x_offset) as usize] {
+                stack.push((y_coord, x_coord, arr_index+1));
+                continue;
+            }
+            if self.numbers_board[(y_coord + y_offset) as usize][(x_coord+x_offset) as usize] > 0 {
+                // prevent unnecessary stack calling, etc w/ non-0 tiles
+                self.revealed_board[(y_coord + y_offset) as usize][(x_coord+x_offset) as usize] = true;
+                stack.push((y_coord, x_coord, arr_index+1));
+                continue;
+            }
+            self.revealed_board[(y_coord + y_offset) as usize][(x_coord+x_offset) as usize] = true;
+            stack.push((y_coord, x_coord, arr_index+1));
+            stack.push((y_coord+y_offset, x_coord+x_offset, 0));            
+        }
+
+    }
+
+    fn chord(&mut self) {
+
+    }
+
+
+    fn question_and_bomb_marks(&mut self) {
+
+    }
+
+
+    fn closed_squares(&mut self) {
+
+    }
+
+    
+    fn first_click(&mut self) {
+
+    }
+
+
+    fn handle_click(&mut self, y: usize, x: usize, clicktype: u8) { // 0 is primary, 2 is rclick
+        /*
+        add enum for win or lose etc
+        if rclick then run questions and bomb marks function. 
+        (add mark array with mark enums)
+        if lclick then either:
+        0. Check if it's first click. If so, run first click function
+        1. It's on a revealed, non-zero square:
+            call chord to "chord" it
+        2. It's on a not-opened square
+            closed_squares handles it
+        3. It's on an open square
+            ignore it(?)
+        more(?)
+        */
     }
 
 }
 
 fn main() {
-    let mut m = MineSweeper::new(100, 100, 2);
-    m.debugprint();
-    let mut buf = String::new();
-    let mut buf2 = String::new();
-    println!("Y value");
-    io::stdin()
-        .read_line(&mut buf)
-        .unwrap();
-    println!("X value");
-    io::stdin()
-        .read_line(&mut buf2)
-        .unwrap();
-
-    buf = buf.trim().to_string();
-    buf2 = buf2.trim().to_string();
-    println!("{}, {}", &buf, &buf2);
-    m.reveal((buf.parse().unwrap(), buf2.parse().unwrap()));
-    m.debugprint();
+    let n = 100;
+    let minecount = ((n*n) as f64 *0.2 ) as usize;
+    let now = Instant::now();
+    let mut m = MineSweeper::new(n, n, minecount);
+    let num1 = 50;
+    let num2 = 50;
+    m.reveal(num1, num2);
+    //m.debugprint();
+    println!("{}", now.elapsed().as_millis());
+     
 }
