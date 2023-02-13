@@ -35,6 +35,7 @@ struct MineSweeper {
     revealed_board: Vec<Vec<bool>>,
     flagged_board: Vec<Vec<TileMarking>>,
     started: bool,
+    mines: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -81,6 +82,7 @@ impl MineSweeper {
             revealed_board: vec![vec![false; x as usize]; y as usize],
             flagged_board: vec![vec![TileMarking::None; x as usize]; y as usize],
             started: false,
+            mines,
         }
 
 
@@ -109,14 +111,15 @@ impl MineSweeper {
             s.push_str("]");
             println!("{}", s);
         }
+        println!("ENDLINE");
     }
 
-    fn reveal(&mut self, y: usize, x: usize) -> Vec<(u16, u16, u8)> {
+    fn reveal(&mut self, y: usize, x: usize) -> Vec<(i16, i16, u8)> {
         let original_revealed_board = self.revealed_board.clone();
         let mut stack = Vec::new();
         if self.numbers_board[y][x] > 0 {
             self.revealed_board[y][x] = true;
-            return vec![]; // todo
+            return vec![(y as i16, x as i16, self.numbers_board[y][x])]; // todo
         }
         if self.revealed_board[y][x] {
             return vec![];
@@ -130,7 +133,7 @@ impl MineSweeper {
                 if original_revealed_board[y][x] == self.revealed_board[y][x] {
                     continue;
                 }
-                ret_vec.push((y as u16, x as u16, self.numbers_board[y][x]))
+                ret_vec.push((y as i16, x as i16, self.numbers_board[y][x]))
             }
         }
         return ret_vec
@@ -181,7 +184,7 @@ impl MineSweeper {
 
     }
 
-    fn chord(&mut self, y: i16, x: i16) {
+    fn chord(&mut self, y: i16, x: i16) -> (u8, Option<Vec<(i16, i16, u8)>>) {
         let mut c = 0;
         let n = self.numbers_board[y as usize][x as usize];
         for y_offset in -1..=1 {
@@ -197,7 +200,9 @@ impl MineSweeper {
                 }
             }
         }
+        
         if c == n {
+            let mut ret_vec = Vec::new();
             for y_offset in -1..=1 {
                 for x_offset in -1..=1 {
                     if y_offset == 0 && x_offset == 0 {
@@ -206,11 +211,18 @@ impl MineSweeper {
                     if y + y_offset >= self.numbers_board.len() as i16 || y + y_offset < 0 || x + x_offset >= self.numbers_board[0].len() as i16 || x + x_offset < 0  {
                         continue;
                     }
-                    // call open function here(?)
+                    if !self.revealed_board[(y+y_offset) as usize][(x+x_offset) as usize] {
+                        if self.numbers_board[(y+y_offset) as usize][(x+x_offset) as usize] >= 100 {
+                            return (2, None);
+                        }
+                        self.revealed_board[(y+y_offset) as usize][(x+x_offset) as usize] = true;
+                        ret_vec.push((y as i16, x as i16, self.numbers_board[y as usize][x as usize]));
+                    }
                 }
             }
+            return (0, Some(ret_vec))
         }
-        
+        return (0, None)
     }
 
 
@@ -218,14 +230,10 @@ impl MineSweeper {
 
     }
 
-
-    fn closed_squares(&mut self) {
-
-    }
-
     
     fn first_click(&mut self, y: usize, x: usize) {
         if self.numbers_board[y][x] >= 100 {
+            println!("ran");
             'blck: {
                 for y1 in 0..self.numbers_board.len() {
                     for x1 in 0..self.numbers_board[0].len() {
@@ -238,6 +246,8 @@ impl MineSweeper {
                                     self.numbers_board[(y1 as i16+y_o) as usize][(x1 as i16+x_o) as usize] += 1;
                                 }
                             }
+                            self.numbers_board[y1][x1] += 100;
+                            //self
                             break 'blck
                         }
                     }
@@ -259,7 +269,26 @@ impl MineSweeper {
     }
 
 
-    fn handle_click(&mut self, y: usize, x: usize, clicktype: u8) -> u8 {
+    fn handle_click(&mut self, y: usize, x: usize, clicktype: u8) -> (u8, Option<Vec<(i16, i16, u8)>>) {
+
+        match clicktype {
+            0 => {
+                if self.started {
+                    if self.numbers_board[y][x] >= 100 {
+                        return (2, None);
+                    }
+                    let r = self.reveal(y, x);
+                    return (0, Some(r));
+                }
+                self.first_click(y, x);
+                let r = self.reveal(y, x);
+                return (0, Some(r));
+            }
+            2 => {
+                // send to rclick handler
+            }
+            _ => panic!(),
+        }
         /*
         return values
         0 if ongoing
@@ -295,7 +324,9 @@ fn main() {
     let mut m = MineSweeper::new(n, n, minecount);
     let num1 = 5;
     let num2 = 5;
-    m.reveal(num1, num2);
+    m.debugprint();
+    m.handle_click(0, 0, 0);
+    //m.reveal(num1, num2);
     m.debugprint();
     println!("{}", now.elapsed().as_millis());
      
