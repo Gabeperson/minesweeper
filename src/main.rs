@@ -1,3 +1,4 @@
+use dolphine::Browser;
 use tokio;
 use rocket;
 use include_dir::include_dir;
@@ -226,8 +227,18 @@ impl MineSweeper {
     }
 
 
-    fn question_and_bomb_marks(&mut self) {
-
+    fn question_and_bomb_marks(&mut self, y: usize, x: usize) { // 0: bomb 1: question
+        match self.flagged_board[y][x] {
+            TileMarking::Mine => {
+                self.flagged_board[y][x] = TileMarking::Question;
+            },
+            TileMarking::None => {
+                self.flagged_board[y][x] = TileMarking::Mine;
+            }
+            TileMarking::Question => {
+                self.flagged_board[y][x] = TileMarking::None;
+            }
+        }
     }
 
     
@@ -247,7 +258,6 @@ impl MineSweeper {
                                 }
                             }
                             self.numbers_board[y1][x1] += 100;
-                            //self
                             break 'blck
                         }
                     }
@@ -271,6 +281,16 @@ impl MineSweeper {
 
     fn handle_click(&mut self, y: usize, x: usize, clicktype: u8) -> (u8, Option<Vec<(i16, i16, u8)>>) {
 
+        /*
+        return values
+        0 if ongoing
+        1 if won
+        2 if lost
+        
+        
+        */
+        // clicktype: 0 is primary, 2 is rclick
+        
         match clicktype {
             0 => {
                 if self.started {
@@ -285,19 +305,10 @@ impl MineSweeper {
                 return (0, Some(r));
             }
             2 => {
-                // send to rclick handler
+                self.question_and_bomb_marks(y, x);
             }
             _ => panic!(),
         }
-        /*
-        return values
-        0 if ongoing
-        1 if won
-        2 if lost
-        
-        
-        */
-        // clicktype: 0 is primary, 2 is rclick
         /*
         add enum for win or lose etc
         if rclick then run questions and bomb marks function. 
@@ -317,17 +328,11 @@ impl MineSweeper {
 
 }
 
-fn main() {
-    let n = 10;
-    let minecount = ((n*n) as f64 *0.2 ) as usize;
-    let now = Instant::now();
-    let mut m = MineSweeper::new(n, n, minecount);
-    let num1 = 5;
-    let num2 = 5;
-    m.debugprint();
-    m.handle_click(0, 0, 0);
-    //m.reveal(num1, num2);
-    m.debugprint();
-    println!("{}", now.elapsed().as_millis());
-     
+#[rocket::main]
+async fn main() {
+    let mut dolphine = Dolphine::new();
+    dolphine.set_static_file_directory(&FILES);
+    
+    dolphine.open_page(Browser::chrome());
+    dolphine.init(true).await;
 }

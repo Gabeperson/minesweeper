@@ -1,22 +1,135 @@
 <link rel="icon" href="favicon.ico">
 <script src="/dolphine.js"></script>
-<title>Dolphine Hello World!</title>
-<h3>Put in two numbers and press the button</h3>
-<input id="1" type="text"><input id="2" type="text">
-<br>
-<button id="button">"Press to add!"</button>
+<script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script> <!--Change to local hosted later-->
+<!DOCTYPE html>
+<title>Sudoku Solver w/ GUI | © 2022 Gabeperson</title>
+<style>
+	.cell {
+		display: flex;
+		justify-content: center;
+		align-content: center;
+		flex-direction: column;
+		text-align: center;
+		border-style: solid;
+		font-size: 40px;
+		border-color: grey;
+		border-width: 1px;
+	}
+	.numberpad {
+		width: 100px;
+		height: 100px; 
+		position: relative;
+		font-size: 40px;
 
-<span id="reply"></span>
+	}
+	#numpadToggle {
+		font-size: 20px;
+		height: 100px;
+		width: 100px;
+		position: relative;
+		
+	}
+	#bigger {
+		font-size: 20px;
+		height: 100px;
+		width: 100px;
+		position: relative;
+		
 
-<script>    
-      const button = document.getElementById("button");
-      button.onclick = async () => {
-            let input1 = document.getElementById("1").value;
-            let input2 = document.getElementById("2").value;
-            input1 = parseInt(input1);
-            input2 = parseInt(input2);
-            let answer = await dolphine.add(input1, input2);
-            let reply = document.getElementById("reply");
-            reply.innerHTML = answer;
+	}
+	#smaller {
+		font-size: 20px;
+		height: 100px;
+		width: 100px;
+		position: relative;
+		
+
+	}
+      #bigdiv {
+            overflow: hidden;
+            position: absolute;
+            left: 5vw;
+            top: 5vh;
+            width: 90vw;
+            height: 90vh;
+            /*border: 5px solid black;*/
       }
+</style>
+<body>
+	<div id="bigdiv"></div>
+</body>
+
+<script>
+	{
+            let x = 100;
+            let y = 100;
+		let size = "80px"; // 50 if smaller
+		let table = document.createElement("table");
+		table.cellSpacing = 0.5;
+		table.cellPadding = 0;
+		for (var i = 0; i < y; i++) {
+			let yDirection = document.createElement("tr");
+			for (var j = 0; j < x; j++) {
+				let xDirection = document.createElement("td");
+				let div = document.createElement("div");
+				let p = document.createElement("p");
+				let id = i + "," + j;
+				div.id = id;
+                        div.classList.add("cell");
+				div.style.width = size;
+				div.style.height = size;
+                        div.border = "none";
+                        
+                        if (i == 0) {
+                              div.style.borderTop = "5px solid black";
+                        }
+                        if (i == y-1) {
+                              div.style.borderBottom = "5px solid black";
+                        }
+                        if (j == 0) {
+                              div.style.borderLeft = "5px solid black";
+                        }
+                        if (j == x-1) {
+                              div.style.borderRight = "5px solid black";
+                        }
+                        
+
+				div.addEventListener("click", async function(e) {
+                              await handleClick(e, id);
+                        });
+				xDirection.appendChild(div);
+				yDirection.appendChild(xDirection);
+			}
+			table.appendChild(yDirection);
+		}
+		document.getElementById("bigdiv").appendChild(table);
+            const panzoom = Panzoom(table, {
+                  cursor: "default",
+                  contain: "outside",
+                  boundsPadding: "10px",
+                  //bounds: true,
+            });
+            table.parentElement.addEventListener("wheel", panzoom.zoomWithWheel);
+	}
+	
+
+	async function handleClick(e, id) {
+            console.log("clicked " + id);
+            let split = id.split(",");
+            //debug remove this
+            if (split.length != 2) {
+                  console.log("split length isn't 2??");
+            }
+            let y = split[0];
+            let x = split[1];
+
+      }
+
+	
+
+	
+
+
+
+
 </script>
