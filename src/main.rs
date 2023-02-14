@@ -19,7 +19,11 @@ use dolphine::Report;
 
 static FILES: Dir = dolphine::include_dir!("web");
 static MINESWEEPER: Lazy<Mutex<Minesweeper>> = Lazy::new(|| Mutex::new(Minesweeper::new(60, 60, 500)));
-// todo bitwise shift for indications???
+// todo bitwise shift for indications??? NOPE
+// todo first click always safe
+// if more than bombs num then reveal only squares that arent bombs
+// timer(??)
+// bombcount(??)
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -305,6 +309,9 @@ impl Minesweeper {
         'blck: {
             match clicktype {
                 0 => {
+                    if self.flagged_board[y][x] != TileMarking::None {
+                        return (200, None);
+                    }
                     if self.started {
                         // if bomb, we lose
                         if self.numbers_board[y][x] >= 100 {
