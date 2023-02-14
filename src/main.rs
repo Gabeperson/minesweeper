@@ -336,7 +336,7 @@ impl Minesweeper {
                     */
                     return (3, Some(vec![(y as i16, x as i16, r)]));
                 }
-                _ => panic!(),
+                _ => return (100, None),
             }
         }
         let mut num_mines = 0;
