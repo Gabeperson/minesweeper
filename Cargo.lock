@@ -256,7 +256,7 @@ dependencies = [
 [[package]]
 name = "dolphine"
 version = "0.1.0"
-source = "git+https://github.com/Gabeperson/dolphine#2dfa4c8060c8f2fcd0708414c4a0cd61c6a20036"
+source = "git+https://github.com/Gabeperson/dolphine#cf2c4c9eb3f07822ac7fc8647b0949a7a934c476"
 dependencies = [
  "eyre",
  "futures-util",
@@ -694,7 +694,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/Gabeperson/dolphine#2dfa4c8060c8f2fcd0708414c4a0cd61c6a20036"
+source = "git+https://github.com/Gabeperson/dolphine#cf2c4c9eb3f07822ac7fc8647b0949a7a934c476"
 dependencies = [
  "quote",
  "syn",

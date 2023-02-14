@@ -374,6 +374,7 @@ impl Minesweeper {
 async fn start_game() -> Result<(), Report> {
     let mut minesweeper = MINESWEEPER.lock().await;
     *minesweeper = Minesweeper::new(60, 60, 500);
+    println!("Made new minesweeper");
     Ok(())
 }
 
@@ -391,6 +392,7 @@ async fn main() {
     let mut dolphine = Dolphine::new();
     dolphine.set_static_file_directory(&FILES);
     dolphine.register_function("send", handler, 3);
+    dolphine.register_function("start", start_game, 0);
     dolphine.open_page(Browser::chrome());
     dolphine.init(true).await;
 }

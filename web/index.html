@@ -57,12 +57,22 @@
       }
 </style>
 <body>
-	<button onclick="reload"></button>
+	<button id="button">RESTART</button>
 	<div id="bigdiv"></div>
 </body>
 
 <script>
-	function reload() {
+	window.onload = async () => {
+		let done = false;
+		while (!done) {
+			try {
+				dolphine.start();
+				done = true;
+			} catch {};
+			await new Promise(resolve => setTimeout(resolve, 50));
+		}
+	}
+	document.getElementById("button").onclick = () => {
 		window.location.reload();
 	}
 	var mdown;
