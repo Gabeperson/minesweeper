@@ -2,7 +2,7 @@
 <script src="/dolphine.js"></script>
 <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script> <!--Change to local hosted later-->
 <!DOCTYPE html>
-<title>Sudoku Solver w/ GUI | © 2022 Gabeperson</title>
+<title>Big Minesweeper | © 2023 Gabeperson</title>
 <style>
 	.cell {
 		display: flex;
@@ -14,6 +14,7 @@
 		font-size: 40px;
 		border-color: grey;
 		border-width: 1px;
+		background-color: lightgray;
 	}
 	.numberpad {
 		width: 100px;
@@ -60,9 +61,16 @@
 </body>
 
 <script>
+	var mdown;
+	var mdownx, mdowny;
+	var mousedownElem;
+	const thresh = 5;
+	const mdelay = 200;
+	var finished = false;
+	const colours = ["IMPOSSIBLE", "blue", "green", "red", "darkBlue", "maroon", "darkCyan", "black", "darkGray"]
 	{
-            let x = 100;
-            let y = 100;
+            let x = 60;
+            let y = 60;
 		let size = "80px"; // 50 if smaller
 		let table = document.createElement("table");
 		table.cellSpacing = 0.5;
@@ -92,11 +100,24 @@
                         if (j == x-1) {
                               div.style.borderRight = "5px solid black";
                         }
-                        
+                        div.addEventListener("mousedown", function(e) {
+					mdown = Date.now();
+					mdownx = e.clientX;
+					mdowny = e.clientY;
+					mousedownElem = id;
+				})
+				div.addEventListener("contextmenu", function(e) {
+					e.preventDefault()
+				})
 
-				div.addEventListener("click", async function(e) {
-                              await handleClick(e, id);
+				div.addEventListener("mouseup", async function(e) {
+					if (mousedownElem == id && Math.abs(mdowny-e.clientY) < 5 && Math.abs(mdownx-e.clientX) < 5 && Date.now()-mdown < mdelay) {
+						// check if drag or click
+						await handleClick(e, id);
+					}
+                              
                         });
+				
 				xDirection.appendChild(div);
 				yDirection.appendChild(xDirection);
 			}
@@ -107,14 +128,20 @@
                   cursor: "default",
                   contain: "outside",
                   boundsPadding: "10px",
+			handleStartEvent: function(e) {
+				
+			},
+
                   //bounds: true,
             });
             table.parentElement.addEventListener("wheel", panzoom.zoomWithWheel);
 	}
-	
 
 	async function handleClick(e, id) {
-            console.log("clicked " + id);
+		if (finished) {
+			return;
+		}
+		//e.preventDefault();
             let split = id.split(",");
             //debug remove this
             if (split.length != 2) {
@@ -123,6 +150,47 @@
             let y = split[0];
             let x = split[1];
 
+		let resp = await dolphine.send(parseInt(y), parseInt(x), e.button);
+		console.log(resp);
+		switch (resp[0]) {
+			case 0: {break}; // continuing
+			case 1: {
+				// won
+				alert("you won!");
+				finished = true;
+				return;
+			}
+			case 2: {
+				// lost
+				alert("you lost!");
+				finished = true;
+				return;
+			}
+			case 3: {
+				console.log(resp[1][0][2])
+				if (resp[1][0][2] == 0) {
+					document.getElementById(id).innerHTML = "F";
+				} else if (resp[1][0][2] == 1) {
+					document.getElementById(id).innerHTML = "M";
+				} else if (resp[1][0][2] == 2) {
+					document.getElementById(id).innerHTML = "";
+				}
+				return;
+				
+			}
+			case 200: {return} // invalid sending from js to rust
+		} 
+		//console.log("reached here");
+		for (let change of resp[1]) {
+			let current_id = String(change[0]) + "," + String(change[1]);
+			let elem = document.getElementById(current_id);
+			elem.style.backgroundColor = "white";
+			if (change[2] == 0) {
+				continue;
+			} 
+			elem.innerHTML = change[2];
+			elem.style.color = colours[change[2]]
+		}
       }
 
 	

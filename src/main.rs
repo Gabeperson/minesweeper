@@ -12,8 +12,13 @@ use rand::seq::SliceRandom;
 use std::io;
 use std::iter::zip;
 use std::time::Instant;
+use once_cell::sync::Lazy;
+use tokio::sync::Mutex;
+use std::collections::HashMap;
+use dolphine::Report;
 
 static FILES: Dir = dolphine::include_dir!("web");
+static MINESWEEPER: Lazy<Mutex<Minesweeper>> = Lazy::new(|| Mutex::new(Minesweeper::new(60, 60, 500)));
 // todo bitwise shift for indications???
 
 
@@ -31,7 +36,7 @@ enum TileMarking {
 }
 
 #[derive(Clone, Debug)]
-struct MineSweeper {
+struct Minesweeper {
     numbers_board: Vec<Vec<u8>>,
     revealed_board: Vec<Vec<bool>>,
     flagged_board: Vec<Vec<TileMarking>>,
@@ -47,8 +52,8 @@ enum GameResult {
 }
 
 
-impl MineSweeper {
-    fn new(x: isize, y: isize, mines: usize) -> MineSweeper {
+impl Minesweeper {
+    fn new(x: isize, y: isize, mines: usize) -> Minesweeper {
         let mut board: Vec<Vec<Tile>> = vec![vec![Tile::None; x as usize]; y as usize];
         let total_length = x * y;
         let array_length = total_length - mines as isize;
@@ -78,7 +83,7 @@ impl MineSweeper {
             }
         }
         
-        MineSweeper {
+        Minesweeper {
             numbers_board,
             revealed_board: vec![vec![false; x as usize]; y as usize],
             flagged_board: vec![vec![TileMarking::None; x as usize]; y as usize],
@@ -134,6 +139,7 @@ impl MineSweeper {
                 if original_revealed_board[y][x] == self.revealed_board[y][x] {
                     continue;
                 }
+                //dbg!("got here");
                 ret_vec.push((y as i16, x as i16, self.numbers_board[y][x]))
             }
         }
@@ -214,10 +220,13 @@ impl MineSweeper {
                     }
                     if !self.revealed_board[(y+y_offset) as usize][(x+x_offset) as usize] {
                         if self.numbers_board[(y+y_offset) as usize][(x+x_offset) as usize] >= 100 {
-                            return (2, None);
+                            if self.flagged_board[(y+y_offset) as usize][(x+x_offset) as usize] != TileMarking::Mine {
+                                return (2, None);
+                            }
+                            continue;
                         }
                         self.revealed_board[(y+y_offset) as usize][(x+x_offset) as usize] = true;
-                        ret_vec.push((y as i16, x as i16, self.numbers_board[y as usize][x as usize]));
+                        ret_vec.push((y+y_offset, x+x_offset, self.numbers_board[(y+y_offset) as usize][(x+x_offset) as usize]));
                     }
                 }
             }
@@ -227,24 +236,27 @@ impl MineSweeper {
     }
 
 
-    fn question_and_bomb_marks(&mut self, y: usize, x: usize) { // 0: bomb 1: question
+    fn question_and_bomb_marks(&mut self, y: usize, x: usize) -> u8 { // 0: bomb 1: question 2: removed
         match self.flagged_board[y][x] {
             TileMarking::Mine => {
                 self.flagged_board[y][x] = TileMarking::Question;
+                0
             },
             TileMarking::None => {
                 self.flagged_board[y][x] = TileMarking::Mine;
+                1
             }
             TileMarking::Question => {
                 self.flagged_board[y][x] = TileMarking::None;
+                2
             }
         }
     }
 
     
-    fn first_click(&mut self, y: usize, x: usize) {
+    fn first_click(&mut self, y: usize, x: usize) { // TODO all safe on first click...??
+        self.started = true;
         if self.numbers_board[y][x] >= 100 {
-            println!("ran");
             'blck: {
                 for y1 in 0..self.numbers_board.len() {
                     for x1 in 0..self.numbers_board[0].len() {
@@ -275,7 +287,6 @@ impl MineSweeper {
                 }
             }
         }
-        self.reveal(y, x);
     }
 
 
@@ -286,29 +297,61 @@ impl MineSweeper {
         0 if ongoing
         1 if won
         2 if lost
-        
+        3 if sending marking
         
         */
         // clicktype: 0 is primary, 2 is rclick
-        
-        match clicktype {
-            0 => {
-                if self.started {
-                    if self.numbers_board[y][x] >= 100 {
-                        return (2, None);
+        let ret;
+        'blck: {
+            match clicktype {
+                0 => {
+                    if self.started {
+                        // if bomb, we lose
+                        if self.numbers_board[y][x] >= 100 {
+                            return (2, None);
+                        }
+                        if self.revealed_board[y][x] && self.numbers_board[y][x] != 0 {
+                            ret = self.chord(y as i16, x as i16);
+                            break 'blck;
+                        } else {
+                            let r = self.reveal(y, x);
+                            ret = (0, Some(r));
+                            break 'blck;
+                        }
                     }
+                    // if we haven't started
+                    self.first_click(y, x);
                     let r = self.reveal(y, x);
                     return (0, Some(r));
                 }
-                self.first_click(y, x);
-                let r = self.reveal(y, x);
-                return (0, Some(r));
+                2 => {
+                    if self.revealed_board[y][x] {
+                        return (200, None)
+                    }
+                    let r = self.question_and_bomb_marks(y, x);
+                    /*
+                    0: question
+                    1: mine
+                    2: none
+                    */
+                    return (3, Some(vec![(y as i16, x as i16, r)]));
+                }
+                _ => panic!(),
             }
-            2 => {
-                self.question_and_bomb_marks(y, x);
-            }
-            _ => panic!(),
         }
+        let mut num_mines = 0;
+        for row in self.revealed_board.iter() {
+            for boolean in row {
+                if *boolean {
+                    num_mines += 1;
+                }
+            }
+        }
+        if num_mines == self.mines {
+            return (1, None);
+        }
+        ret
+
         /*
         add enum for win or lose etc
         if rclick then run questions and bomb marks function. 
@@ -323,16 +366,24 @@ impl MineSweeper {
             ignore it(?)
         more(?)
         */
-        todo!();
     }
 
+}
+
+#[dolphine::async_function]
+async fn handler(y: usize, x: usize, click_type: usize) -> Result<(u8, Option<Vec<(i16, i16, u8)>>), Report> {
+    let mut minesweeper = MINESWEEPER.lock().await;
+
+    let resp = minesweeper.handle_click(y, x, click_type as u8);
+    //dbg!(&resp);
+    Ok(resp)
 }
 
 #[rocket::main]
 async fn main() {
     let mut dolphine = Dolphine::new();
     dolphine.set_static_file_directory(&FILES);
-    
+    dolphine.register_function("send", handler, 3);
     dolphine.open_page(Browser::chrome());
     dolphine.init(true).await;
 }
