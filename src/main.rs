@@ -23,7 +23,7 @@ static MINESWEEPER: Lazy<Mutex<Minesweeper>> = Lazy::new(|| Mutex::new(Minesweep
 // todo first click always safe
 // if more than bombs num then reveal only squares that arent bombs
 // timer(??)
-// bombcount(??)
+// bombcount(??) 
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
