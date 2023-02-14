@@ -225,8 +225,8 @@ impl Minesweeper {
                             }
                             continue;
                         }
-                        self.revealed_board[(y+y_offset) as usize][(x+x_offset) as usize] = true;
-                        ret_vec.push((y+y_offset, x+x_offset, self.numbers_board[(y+y_offset) as usize][(x+x_offset) as usize]));
+                        let r = self.reveal((y+y_offset) as usize, (x+x_offset) as usize);
+                        ret_vec.extend_from_slice(&r);
                     }
                 }
             }
@@ -368,6 +368,13 @@ impl Minesweeper {
         */
     }
 
+}
+
+#[dolphine::async_function]
+async fn start_game() -> Result<(), Report> {
+    let mut minesweeper = MINESWEEPER.lock().await;
+    *minesweeper = Minesweeper::new(60, 60, 500);
+    Ok(())
 }
 
 #[dolphine::async_function]
