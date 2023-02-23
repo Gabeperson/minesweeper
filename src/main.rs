@@ -212,7 +212,7 @@ impl Minesweeper {
             }
         }
         
-        if c == n {
+        if c >= n {
             let mut ret_vec = Vec::new();
             for y_offset in -1..=1 {
                 for x_offset in -1..=1 {
