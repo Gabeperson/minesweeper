@@ -15,7 +15,6 @@
 		border-color: grey;
 		border-width: 1px;
 		background-color: lightgray;
-		font-weight: bold;
 	}
 	.numberpad {
 		width: 100px;
@@ -56,11 +55,6 @@
             height: 90vh;
             /*border: 5px solid black;*/
       }
-	.mine {
-		height: 70px;
-		width: 70px;
-		position: relative;
-	}
 </style>
 <body>
 	<button id="button">RESTART</button>
@@ -100,10 +94,10 @@
 			for (var j = 0; j < x; j++) {
 				let xDirection = document.createElement("td");
 				let div = document.createElement("div");
-				let center = document.createElement("center");
+				let p = document.createElement("p");
 				let id = i + "," + j;
-				center.id = id;
-				div.classList.add("cell");
+				div.id = id;
+                        div.classList.add("cell");
 				div.style.width = size;
 				div.style.height = size;
                         div.border = "none";
@@ -138,7 +132,6 @@
                               
                         });
 				
-				div.append(center)
 				xDirection.appendChild(div);
 				yDirection.appendChild(xDirection);
 			}
@@ -183,26 +176,16 @@
 			}
 			case 2: {
 				// lost
-				console.log("reached");
-				console.log(resp[1])
-				for (let coord of resp[1]) {
-					let elem = document.createElement("img");
-					elem.src = "mine.png"
-					elem.classList.add("mine");
-					document.getElementById(`${coord[0]},${coord[1]}`).appendChild(elem);
-				}
-				setTimeout(() => {
-					alert("you lost!");
-				}, 50);
+				alert("you lost!");
 				finished = true;
 				return;
 			}
 			case 3: {
 				console.log(resp[1][0][2])
 				if (resp[1][0][2] == 0) {
-					document.getElementById(id).innerHTML = "?";
+					document.getElementById(id).innerHTML = "F";
 				} else if (resp[1][0][2] == 1) {
-					document.getElementById(id).innerHTML = "🚩";
+					document.getElementById(id).innerHTML = "M";
 				} else if (resp[1][0][2] == 2) {
 					document.getElementById(id).innerHTML = "";
 				}

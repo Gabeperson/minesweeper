@@ -225,7 +225,7 @@ impl Minesweeper {
                     if !self.revealed_board[(y+y_offset) as usize][(x+x_offset) as usize] {
                         if self.numbers_board[(y+y_offset) as usize][(x+x_offset) as usize] >= 100 {
                             if self.flagged_board[(y+y_offset) as usize][(x+x_offset) as usize] != TileMarking::Mine {
-                                return (2, Some(self.handle_loss()));
+                                return (2, None);
                             }
                             continue;
                         }
@@ -293,19 +293,6 @@ impl Minesweeper {
         }
     }
 
-    fn handle_loss(&mut self) -> Vec<(i16, i16, u8)> {
-        let mut v: Vec<(i16, i16, u8)> = vec![];
-        for (indexy, y) in self.numbers_board.iter().enumerate() {
-            for (indexx, x) in y.iter().enumerate() {
-                if *x >= 100 {
-                    v.push((indexy as i16, indexx as i16, 0));
-                }
-            }
-        }
-        
-        return v;
-    }
-
 
     fn handle_click(&mut self, y: usize, x: usize, clicktype: u8) -> (u8, Option<Vec<(i16, i16, u8)>>) {
 
@@ -328,7 +315,7 @@ impl Minesweeper {
                     if self.started {
                         // if bomb, we lose
                         if self.numbers_board[y][x] >= 100 {
-                            return (2, Some(self.handle_loss()));
+                            return (2, None);
                         }
                         if self.revealed_board[y][x] && self.numbers_board[y][x] != 0 {
                             ret = self.chord(y as i16, x as i16);
